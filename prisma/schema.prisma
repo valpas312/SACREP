@@ -1,0 +1,41 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Mazfren {
+  id            Int           @id @default(autoincrement())
+  codigo        String        @unique
+  descripcion   String
+  precio        Decimal       @db.Decimal(10,2)
+  imagen        String?
+  categoria     String?
+  fabricante    String?
+  equivalencias Equivalencia[] @relation("MazfrenToEquivalencia")
+}
+
+model Frasle {
+  id            Int           @id @default(autoincrement())
+  codigo        String        @unique
+  descripcion   String
+  precio        Decimal       @db.Decimal(10,2)
+  imagen        String?
+  categoria     String?
+  fabricante    String?
+  equivalencias Equivalencia[] @relation("FrasleToEquivalencia")
+}
+
+model Equivalencia {
+  id             Int      @id @default(autoincrement())
+  mazfrenCodigo  String?  @unique
+  frasleCodigo   String?  @unique
+
+  mazfren Mazfren? @relation("MazfrenToEquivalencia", fields: [mazfrenCodigo], references: [codigo])
+  frasle  Frasle?  @relation("FrasleToEquivalencia", fields: [frasleCodigo], references: [codigo])
+}
