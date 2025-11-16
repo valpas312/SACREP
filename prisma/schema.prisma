@@ -1,41 +1,38 @@
-// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-model Mazfren {
-  id            Int           @id @default(autoincrement())
-  codigo        String        @unique
-  descripcion   String
-  precio        Decimal       @db.Decimal(10,2)
-  imagen        String?
-  categoria     String?
-  fabricante    String?
-  equivalencias Equivalencia[] @relation("MazfrenToEquivalencia")
-}
-
-model Frasle {
-  id            Int           @id @default(autoincrement())
-  codigo        String        @unique
-  descripcion   String
-  precio        Decimal       @db.Decimal(10,2)
-  imagen        String?
-  categoria     String?
-  fabricante    String?
-  equivalencias Equivalencia[] @relation("FrasleToEquivalencia")
-}
-
-model Equivalencia {
+model equivalencias {
   id             Int      @id @default(autoincrement())
-  mazfrenCodigo  String?  @unique
-  frasleCodigo   String?  @unique
+  mazfren_codigo String?  @db.VarChar(50)
+  frasle_codigo  String?  @db.VarChar(50)
+  frasle         frasle?  @relation(fields: [frasle_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction, map: "fk_eq_fra")
+  mazfren        mazfren? @relation(fields: [mazfren_codigo], references: [codigo], onDelete: NoAction, onUpdate: NoAction, map: "fk_eq_maz")
+}
 
-  mazfren Mazfren? @relation("MazfrenToEquivalencia", fields: [mazfrenCodigo], references: [codigo])
-  frasle  Frasle?  @relation("FrasleToEquivalencia", fields: [frasleCodigo], references: [codigo])
+model frasle {
+  id            Int             @id @default(autoincrement())
+  codigo        String          @unique @db.VarChar(50)
+  descripcion   String
+  precio        Decimal?        @db.Decimal(12, 2)
+  imagen        String?
+  categoria     String?
+  fabricante    String?
+  equivalencias equivalencias[]
+}
+
+model mazfren {
+  id            Int             @id @default(autoincrement())
+  codigo        String          @unique @db.VarChar(50)
+  descripcion   String
+  precio        Decimal?        @db.Decimal(12, 2)
+  imagen        String?
+  categoria     String?
+  fabricante    String?
+  equivalencias equivalencias[]
 }
