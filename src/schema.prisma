@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+    output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////////////
+// CATALOGO
+//////////////////////////////
+
+model Brand {
+  id        Int       @id @default(autoincrement())
+  name      String
+  logoUrl   String?   @map("logo_url")
+  website   String?
+  products  Product[]
+
+  @@map("brands")
+}
+
+model Category {
+  id                Int               @id @default(autoincrement())
+  name              String
+  parentCategoryId  Int?              @map("parent_category_id")
+  parent            Category?         @relation("CategoryToChildren", fields: [parentCategoryId], references: [id])
+  children          Category[]        @relation("CategoryToChildren")
+  productCategories ProductCategory[]
+
+  @@map("categories")
+}
+
+model Product {
+  id                          Int                          @id @default(autoincrement())
+  brandId                     Int                          @map("brand_id")
+  brand                       Brand                        @relation(fields: [brandId], references: [id])
+  sku                         String                       @unique
+  name                        String
+  description                 String?
+  imageUrl                    String?                      @map("image_url")
+  active                      Boolean                      @default(true)
+  createdAt                   DateTime                     @default(now()) @map("created_at")
+  updatedAt                   DateTime                     @updatedAt @map("updated_at")
+
+  categories                  ProductCategory[]
+  oemCodes                    ProductOem[]
+  stocks                      ProductStock[]
+  prices                      ProductPrice[]
+  vehicleCompatibilities      ProductVehicleCompatibility[]
+  equivalenceProducts         ProductEquivalence[]         @relation("ProductToEquivalences")
+  equivalentTo                ProductEquivalence[]         @relation("ProductToEquivalents")
+
+  cartItems                   CartItem[]
+  orderItems                  OrderItem[]
+
+  @@map("products")
+}
+
+model ProductCategory {
+  productId  Int      @map("product_id")
+  categoryId Int      @map("category_id")
+  product    Product  @relation(fields: [productId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([productId, categoryId])
+  @@map("product_categories")
+}
+
+model ProductOem {
+  id           Int      @id @default(autoincrement())
+  productId    Int      @map("product_id")
+  product      Product  @relation(fields: [productId], references: [id])
+  oemCode      String   @map("oem_code")
+  manufacturer String?
+
+  @@map("product_oem")
+}
+
+model ProductStock {
+  id        Int      @id @default(autoincrement())
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  location  String?
+
+  @@map("product_stock")
+}
+
+model ProductPrice {
+  id         Int      @id @default(autoincrement())
+  productId  Int      @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id])
+  price      Decimal
+  currency   String   @default("ARS")
+  validFrom  DateTime @map("valid_from")
+  validTo    DateTime? @map("valid_to")
+
+  @@map("product_prices")
+}
+
+model Vehicle {
+  id           Int                          @id @default(autoincrement())
+  brand        String
+  model        String
+  yearStart    Int                          @map("year_start")
+  yearEnd      Int?                         @map("year_end")
+  engine       String?
+  fuel         String?
+  compatiblity ProductVehicleCompatibility[]
+
+  @@map("vehicles")
+}
+
+model ProductVehicleCompatibility {
+  productId Int      @map("product_id")
+  vehicleId Int      @map("vehicle_id")
+  product   Product  @relation(fields: [productId], references: [id])
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
+
+  @@id([productId, vehicleId])
+  @@map("product_vehicle_compatibility")
+}
+
+model ProductEquivalence {
+  id                  Int      @id @default(autoincrement())
+  productId           Int      @map("product_id")
+  equivalentProductId Int      @map("equivalent_product_id")
+  type                String?
+
+  product             Product  @relation("ProductToEquivalences", fields: [productId], references: [id])
+  equivalentProduct   Product  @relation("ProductToEquivalents", fields: [equivalentProductId], references: [id])
+
+  @@unique([productId, equivalentProductId])
+  @@map("product_equivalences")
+}
+
+//////////////////////////////
+// ECOMMERCE (B2B)
+//////////////////////////////
+
+model Customer {
+  id           Int       @id @default(autoincrement())
+  alias        String
+  companyName  String?   @map("company_name")
+  cuit         String?
+  email        String    @unique
+  phone        String?
+  passwordHash String    @map("password_hash")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  addresses    Address[]
+  carts        Cart[]
+  orders       Order[]
+
+  @@map("customers")
+}
+
+model Address {
+  id         Int       @id @default(autoincrement())
+  customerId Int       @map("customer_id")
+  customer   Customer  @relation(fields: [customerId], references: [id])
+
+  street     String
+  city       String
+  province   String?
+  country    String
+  zip        String    @map("zip")
+
+  orders     Order[]
+
+  @@map("addresses")
+}
+
+model Cart {
+  id         Int       @id @default(autoincrement())
+  customerId Int       @map("customer_id")
+  customer   Customer  @relation(fields: [customerId], references: [id])
+
+  status     String    @default("active")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  items      CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int      @map("cart_id")
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+
+  @@map("cart_items")
+}
+
+model Order {
+  id          Int       @id @default(autoincrement())
+  customerId  Int       @map("customer_id")
+  customer    Customer  @relation(fields: [customerId], references: [id])
+
+  addressId   Int       @map("address_id")
+  address     Address   @relation(fields: [addressId], references: [id])
+
+  status      String    @default("pending")
+  totalAmount Decimal   @map("total_amount")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  items       OrderItem[]
+  payments    Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id           Int      @id @default(autoincrement())
+  orderId      Int      @map("order_id")
+  order        Order    @relation(fields: [orderId], references: [id])
+  productId    Int      @map("product_id")
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Int
+  priceAtOrder Decimal  @map("price_at_order")
+
+  @@map("order_items")
+}
+
+model Payment {
+  id            Int      @id @default(autoincrement())
+  orderId       Int      @map("order_id")
+  order         Order    @relation(fields: [orderId], references: [id])
+  method        String
+  amount        Decimal
+  status        String    @default("pending")
+  transactionId String?   @map("transaction_id")
+  provider      String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("payments")
+}
